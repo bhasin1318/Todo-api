@@ -14,7 +14,7 @@ app.get('/', function (req, res) {
 })
 
 //GET request
-//todos
+// GET /todos?completed=true&q=house
 app.get('/todos', function (req, res) {
 	var queryParams = req.query
 	var fileterdTodos = todos
@@ -23,10 +23,15 @@ app.get('/todos', function (req, res) {
 	} else if (queryParams.hasOwnProperty('completed') && queryParams.completed == 'false') {
 		fileterdTodos = _.where(fileterdTodos, {completed: false})
 	}
-	_.findWhere(fileterdTodos, {completed: true})
 
+	if (queryParams.hasOwnProperty('q') && queryParams.q.length > 0) {
+		fileterdTodos = _.filter(fileterdTodos, function (todo) {
+			return todo.description.toLowerCase().indexOf(queryParams.q) > -1
+		})
+	}
 	res.json(fileterdTodos)
 })
+
 //todos/id
 app.get('/todos/:id', function (req, res) {
 	var todoId = parseInt(req.params.id, 10)
@@ -93,7 +98,6 @@ app.put('/todos/:id', function (req, res) {
 	_.extend(matchedTodo, validAttributes)
 	res.json(matchedTodo)
 })
-
 app.listen(PORT, function () {
-	console.log('Express listening on port ' + PORT);
+	console.log('Express listening on port ' + PORT)
 })
