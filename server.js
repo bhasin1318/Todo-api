@@ -16,24 +16,48 @@ app.get('/', function(req, res) {
 //GET request
 // GET /todos?completed=true&q=house
 app.get('/todos', function(req, res) {
-	var queryParams = req.query
-	var fileterdTodos = todos
-	if (queryParams.hasOwnProperty('completed') && queryParams.completed == 'true') {
-		fileterdTodos = _.where(fileterdTodos, {
-			completed: true
-		})
-	} else if (queryParams.hasOwnProperty('completed') && queryParams.completed == 'false') {
-		fileterdTodos = _.where(fileterdTodos, {
-			completed: false
-		})
+	var query = req.query
+
+	var where = {
+
 	}
 
-	if (queryParams.hasOwnProperty('q') && queryParams.q.length > 0) {
-		fileterdTodos = _.filter(fileterdTodos, function(todo) {
-			return todo.description.toLowerCase().indexOf(queryParams.q) > -1
-		})
+	if (query.hasOwnProperty('completed') && query.completed == 'true') {
+		where.completed = true
+	} else if (query.hasOwnProperty('completed') && query.completed == 'false') {
+		where.completed = false
 	}
-	res.json(fileterdTodos)
+
+	if (query.hasOwnProperty('q') && query.q.length > 0) {
+		where.description = {
+			$like: '%' + query.q + '%'
+		}
+	}
+
+	db.todo.findAll({
+		where: where
+	}).then(function(todos) {
+		res.json(todos)
+	}, function(e) {
+		res.status(500).send()
+	})
+	// var fileterdTodos = todos
+	// if (queryParams.hasOwnProperty('completed') && queryParams.completed == 'true') {
+	// 	fileterdTodos = _.where(fileterdTodos, {
+	// 		completed: true
+	// 	})
+	// } else if (queryParams.hasOwnProperty('completed') && queryParams.completed == 'false') {
+	// 	fileterdTodos = _.where(fileterdTodos, {
+	// 		completed: false
+	// 	})
+	// }
+
+	// if (queryParams.hasOwnProperty('q') && queryParams.q.length > 0) {
+	// 	fileterdTodos = _.filter(fileterdTodos, function(todo) {
+	// 		return todo.description.toLowerCase().indexOf(queryParams.q) > -1
+	// 	})
+	// }
+	// res.json(fileterdTodos)
 })
 
 //todos/id
@@ -62,9 +86,9 @@ app.get('/todos/:id', function(req, res) {
 //POST
 app.post('/todos', function(req, res) {
 	var body = _.pick(req.body, "description", "completed")
-	db.todo.create(body).then(function (todo) {
+	db.todo.create(body).then(function(todo) {
 		res.json(todo.toJSON())
-	}, function (e) {
+	}, function(e) {
 		res.status(404).json(e)
 	})
 	// if (!_.isBoolean(body.completed) || !_.isString(body.description) || body.description.trim().length == 0) {
