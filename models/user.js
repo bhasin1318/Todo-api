@@ -45,20 +45,41 @@ module.exports = function(sequelize, DataTypes) {
 		classMethods: {
 			authenticate: function(body) {
 				return new Promise(function(resolve, reject) {
-					if (typeof body.email == 'string' && typeof body.password == 'string') {
-						user.findOne({
-							where: {
-								email: body.email
+					if (typeof body.email !== 'string' || typeof body.password !== 'string') {
+						return reject();
+					}
+
+					user.findOne({
+						where: {
+							email: body.email
+						}
+					}).then(function(user) {
+						if (!user || !bcrypt.compareSync(body.password, user.get('password_hash'))) {
+							return reject();
+						}
+
+						resolve(user);
+					}, function(e) {
+						reject();
+					});
+				});
+			},
+			findByToken: function(token) {
+				return new Promise(function(resolve, reject) {
+					try {
+						var decodedJWT = jwt.verify(token, 'qwerty098')
+						var bytes = cryptojs.AES.decrypt(decodedJWT.token, 'abc123!@#!')
+						var tokenData = JSON.parse(bytes.toString(cryptojs.enc.Utf8))
+						user.findById(tokenData.id).then(function(user) {
+							if (user) {
+								resolve(user)
+							} else {
+								reject()
 							}
-						}).then(function(user) {
-							if (!user || !bcrypt.compareSync(body.password, user.get('password_hash'))) {
-								return reject()
-							}
-							resolve(user)
 						}, function(e) {
 							reject()
 						})
-					} else {
+					} catch (e) {
 						reject()
 					}
 				})
@@ -69,13 +90,16 @@ module.exports = function(sequelize, DataTypes) {
 				var json = this.toJSON()
 				return _.pick(json, 'id', 'email', 'createdAt', 'updatedAt')
 			},
-			generateToken: function (type) {
+			generateToken: function(type) {
 				if (!_.isString(type)) {
 					return undefined
 				}
 
 				try {
-					var stringData = JSON.stringify({ud: this.get('id'), type: type})
+					var stringData = JSON.stringify({
+						id: this.get('id'),
+						type: type
+					})
 					var encryptedData = cryptojs.AES.encrypt(stringData, 'abc123!@#!').toString()
 					var token = jwt.sign({
 						token: encryptedData
